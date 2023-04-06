@@ -34,7 +34,7 @@ app.use(bodyParser.default.json());
 app.get('/', (req, res) => {
    res.status(200).json({message: "welcome"});
 });
-app.post('/signup', async (req, res, next) => {
+app.post('/signup', async (req, res) => {
     try {
         const created = await new users(db).createUser(req.body);
         if (!created) {
@@ -47,7 +47,7 @@ app.post('/signup', async (req, res, next) => {
     }
 });
 
-app.post('/login', async (req, res, next) => {
+app.post('/login', async (req, res) => {
     try {
         const loginObj = await new users(db).login(req.body);
         if (!loginObj) {
@@ -60,7 +60,7 @@ app.post('/login', async (req, res, next) => {
     }
 });
 
-app.post('/save-password', async (req, res, next) => {
+app.post('/save-password', async (req, res) => {
     try {
         req.body.user_id = req.auth.id;
         const obj = await new usersPasswords(db).create(req.body);
@@ -74,7 +74,7 @@ app.post('/save-password', async (req, res, next) => {
     }
 });
 
-app.post('/list', async (req, res, next) => {
+app.post('/list', async (req, res) => {
     try {
         req.body.user_id = req.auth.id;
         const obj = await new usersPasswords(db).list(req.body);
@@ -82,6 +82,23 @@ app.post('/list', async (req, res, next) => {
             return res.status(403).json({message: 'Invalid key'});
         }
         res.json({message: 'success', data: obj, status: 200});
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({message: 'internal_server_error'})
+    }
+});
+
+app.delete('/user-password/:id', async (req, res) => {
+    try {
+        req.body.user_id = req.auth.id;
+        const numDeleted = await new usersPasswords(db).delete({
+            user_id: req.auth.id,
+            user_password_id: req.params.id
+        });
+        if (!numDeleted && numDeleted !== 0) {
+            return res.status(403).json({message: 'Invalid key'});
+        }
+        res.json({message: 'success', data: `Deleted ${numDeleted} record(s)`, status: 200});
     } catch (e) {
         console.error(e);
         res.status(500).json({message: 'internal_server_error'})

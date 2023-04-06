@@ -70,4 +70,10 @@ export class usersPasswords {
             return row;
         });
     }
+
+    async delete(obj) {
+        const {table} = this;
+        const {user_password_id, user_id} = obj;
+        return await table(this.db).where('id', user_password_id).where('user_id', user_id).del();
+    }
 }

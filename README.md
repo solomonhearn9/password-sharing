@@ -13,3 +13,6 @@
 
 	    knex migrate:up --client sqlite3 --connection .data/sec_password.sqlite3
 5. To run the project use `npm start`
+
+
+![ERD](erd.png)

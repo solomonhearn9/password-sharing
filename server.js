@@ -26,11 +26,14 @@ app.use(
     expressjwt({
         secret: process.env.JWT_SECRET,
         algorithms: ["HS256"],
-    }).unless({ path: ["/login", "/signup"] })
+    }).unless({ path: ["/login", "/signup", '/'] })
 );
 
 app.use(bodyParser.default.json());
 
+app.get('/', (req, res) => {
+   res.status(200).json({message: "welcome"});
+});
 app.post('/signup', async (req, res, next) => {
     try {
         const created = await new users(db).createUser(req.body);

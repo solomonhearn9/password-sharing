@@ -11,7 +11,7 @@
 4. Update database with correct schema
 
 
-	    knex migrate:up --client sqlite3 --connection .data/sec_password.sqlite3
+	    ./node_modules/.bin/knex migrate:up --client sqlite3 --connection .data/sec_password.sqlite3
 5. To run the project use `npm start`
 
 

@@ -74,6 +74,36 @@ app.post('/save-password', async (req, res) => {
     }
 });
 
+app.post('/share-password', async (req, res) => {
+    try {
+        const passwordId = req.body.passwordId;
+        const encKey = req.body.encKey;
+        const email = req.body.inviteeEmail;
+        const inviteeUser = await new users(db).getByEmail(email);
+        if (!inviteeUser) {
+          return res.status(400).json({message: 'The user with whom you want to share password does not exist'});
+        }
+        const passwordRow = await new usersPasswords(db).getPasswordById(passwordId, encKey);
+        if (!passwordRow) {
+            return res.status(403).json({message: 'Invalid password id'});
+        }
+        const usersPasswordsObj = new usersPasswords(db);
+        await usersPasswordsObj.createActual({
+          user_id: inviteeUser.id,
+          shared_by_user_id: req.auth.id,
+          password_label: passwordRow.password_label,
+          url: passwordRow.url,
+          encKey: process.env['SYS_ENC_KEY'],
+          login: usersPasswordsObj.encrypt(passwordRow.login, process.env['SYS_ENC_KEY']),
+          password: usersPasswordsObj.encrypt(passwordRow.password, process.env['SYS_ENC_KEY'])
+        });
+        res.json({message: 'done', status: 200});
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({message: 'internal_server_error'})
+    }
+});
+
 app.post('/list', async (req, res) => {
     try {
         req.body.user_id = req.auth.id;
@@ -87,6 +117,21 @@ app.post('/list', async (req, res) => {
         res.status(500).json({message: 'internal_server_error'})
     }
 });
+
+app.post('/list-shared-passwords', async (req, res) => {
+    try {
+        req.body.user_id = req.auth.id;
+        const obj = await new usersPasswords(db).listShared(req.body);
+        if (!obj) {
+            return res.status(403).json({message: 'Invalid key'});
+        }
+        res.json({message: 'success', data: obj, status: 200});
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({message: 'internal_server_error'})
+    }
+});
+
 
 app.delete('/user-password/:id', async (req, res) => {
     try {

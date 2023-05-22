@@ -10,30 +10,38 @@ export class usersPasswords {
 
     async create(obj) {
         const {db} = this;
-        const trx = await db.transaction();
         const valid  = await this.validateEncKey(obj.encKey, obj.user_id);
         if (!valid) {
             return false;
         }
-        try {
-            const row = {
+        obj.login = this.encrypt(obj.login, obj.encKey);
+        obj.password = this.encrypt(obj.password, obj.encKey);
+        obj.shared_by_user_id = null;
+        return this.createActual(obj);
+    }
+  
+   async createActual(obj) {
+     const {db} = this;
+     const trx = await db.transaction();
+     try {
+       const row = {
                 user_id: obj.user_id,
-                shared_by_user_id: null,
+                shared_by_user_id: obj.shared_by_user_id,
                 password_label: obj.password_label,
                 url: obj.url,
-                login: this.encrypt(obj.login, obj.encKey),
-                password: this.encrypt(obj.password, obj.encKey),
+                login: obj.login,
+                password: obj.password,
             };
             const rec = await trx('users_passwords')
                 .insert(row, 'id');
             await trx.commit();
             return rec;
-        } catch (e) {
-            // console.error(e);
+       } catch (e) {
+       // console.error(e);
             await trx.rollback();
             throw e;
-        }
-    }
+       }
+   }
 
     encrypt(str, key) {
         const algorithm = 'aes-256-ctr';
@@ -63,10 +71,21 @@ export class usersPasswords {
     async list(obj) {
         const {table} = this;
         const {encKey, user_id} = obj;
-        const results = await table(this.db).where('user_id', user_id);
+        const results = await table(this.db).where('user_id', user_id).whereNull('shared_by_user_id');
         return results.map( (row) => {
             row['login'] =  this.decrypt(row['login'], encKey);
             row['password'] =  this.decrypt(row['password'], encKey);
+            return row;
+        });
+    }
+  
+    async listShared(obj) {
+        const {table} = this;
+        const {encKey, user_id} = obj;
+        const results = await table(this.db).where('user_id', user_id).whereNotNull('shared_by_user_id');
+        return results.map( (row) => {
+            row['login'] =  this.decrypt(row['login'], process.env['SYS_ENC_KEY']);
+            row['password'] =  this.decrypt(row['password'], process.env['SYS_ENC_KEY']);
             return row;
         });
     }
@@ -75,5 +94,16 @@ export class usersPasswords {
         const {table} = this;
         const {user_password_id, user_id} = obj;
         return await table(this.db).where('id', user_password_id).where('user_id', user_id).del();
+    }
+  
+    async getPasswordById(passwordId, encKey) {
+      const {table} = this;
+      const passwordRow = await table(this.db).where('id', passwordId).first();
+      if (!passwordRow) {
+        return false;
+      }
+      passwordRow.login = this.decrypt(passwordRow.login, encKey);
+      passwordRow.password = this.decrypt(passwordRow.password, encKey);
+      return passwordRow;
     }
 }

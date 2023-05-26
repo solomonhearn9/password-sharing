@@ -62,4 +62,9 @@ export class users {
         const {usersTable} = this;
         return usersTable(this.db).where('id', id).first();
     }
+  
+  async getByEmail(email) {
+    const {usersTable} = this;
+    return usersTable(this.db).where('email', email).first();
+  }
 }
